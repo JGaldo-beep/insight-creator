@@ -4,42 +4,35 @@
 
 El sistema actual corre completamente en Docker con cuatro servicios orquestados:
 
-┌─────────────────────────────────────────────────────┐
-│                  Docker Compose                     │
-│                                                     │
-│  ┌──────────┐    ┌────────────┐    ┌─────────────┐  │
-│  │PostgreSQL│◄───│  FastAPI   │◄───│  LangGraph  │  │
-│  │    db    │    │  :8000     │    │   Agent     │  │
-│  └──────────┘    └────────────┘    └─────────────┘  │
-│  ┌────┴───────┐                                     │
-│  │  Pipeline  │                                     │
-│  │  (Seed)    │                                     │
-│  └────────────┘                                     │
-│       ▲                                             │
-└─────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph DC["Docker Compose"]
+        direction LR
+        Pipeline["Pipeline<br/>(Seed)"]
+        DB[("PostgreSQL<br/>db")]
+        API["FastAPI<br/>:8000"]
+        Agent["LangGraph<br/>Agent"]
+        Pipeline -- seed --> DB
+        API -- queries --> DB
+        Agent -- calls --> API
+    end
+```
 
 ## Arquitectura en GCP (Producción)
 
 ### Diagrama General
 
-                    ┌─────────────────┐
-                    │   Cloud Run     │
-                    │   (FastAPI)     │
-                    └────────┬────────┘
-                             │
-          ┌──────────────────┼────────────────┐
-          │                  │                │
- ┌────────▼───────┐ ┌───────▼──────┐ ┌────────▼────────┐
- │   Cloud SQL    │ │   BigQuery   │ │   Vertex AI     │
- │  (PostgreSQL)  │ │  (Analítico) │ │  (LLM/Agente)   │
- └────────────────┘ └──────────────┘ └─────────────────┘
-          │                 │
- ┌────────▼───────┐ ┌───────▼──────┐
- │  Cloud Storage │ │     dbt      │
- │  (Raw Data)    │ │(Transforma.) │
- └────────────────┘ └──────────────┘
+```mermaid
+flowchart TB
+    CR["Cloud Run<br/>(FastAPI)"]
+    CR --> SQL[("Cloud SQL<br/>PostgreSQL")]
+    CR --> BQ[("BigQuery<br/>Analítico")]
+    CR --> VAI["Vertex AI<br/>(LLM / Agente)"]
+    SQL --> GCS[("Cloud Storage<br/>Raw Data")]
+    BQ --> DBT["dbt<br/>(Transformaciones)"]
+```
 
- ### Componentes y Justificación
+### Componentes y Justificación
 
 #### Ingesta y Almacenamiento
 
@@ -66,7 +59,10 @@ El sistema actual corre completamente en Docker con cuatro servicios orquestados
 - Genera documentación automática del linaje de datos
 - Aplica tests de calidad nativos (not_null, unique, accepted_values)
 
-GCS (raw) → dbt → BigQuery (curated) → vw_kpis → Agente
+```mermaid
+flowchart LR
+    GCS["GCS<br/>(raw)"] --> DBT[dbt] --> BQ["BigQuery<br/>(curated)"] --> VW[vw_kpis] --> AG[Agente]
+```
 
 #### IA y Agente
 
@@ -82,11 +78,13 @@ GCS (raw) → dbt → BigQuery (curated) → vw_kpis → Agente
 
 #### Seguridad
 
-Cloud Run
-│
-├── Cloud SQL      → Usuario read-only para el agente
-├── BigQuery       → IAM roles por servicio (principle of least privilege)
-└── Secret Manager → API keys y credenciales (nunca en variables de entorno)
+```mermaid
+flowchart LR
+    CR[Cloud Run]
+    CR -- "Usuario read-only<br/>para el agente" --> SQL[Cloud SQL]
+    CR -- "IAM roles por servicio<br/>(least privilege)" --> BQ[BigQuery]
+    CR -- "API keys y credenciales<br/>(nunca en env vars)" --> SM[Secret Manager]
+```
 
 - El agente de IA mantiene permisos de solo lectura en producción
 - Las credenciales se gestionan con **Google Secret Manager**
@@ -98,30 +96,18 @@ Cloud Run
 
 ### Flujo General
 
-Developer → Git Push → Azure DevOps Pipeline
-                │
-┌───────────────┼───────────────┐
-│               │               │
-Lint &          Tests          Build &
-Format         (pytest)         Push
-(ruff)                        (Docker)
-│               │               │
-└───────────────┼───────────────┘
-                │
-      ┌─────────▼──────────┐
-      │  Deploy Staging    │
-      │  (Cloud Run dev)   │
-      └─────────┬──────────┘
-                │
-      ┌─────────▼──────────┐
-      │  Approval Manual   │
-      │  (Tech Lead)       │
-      └─────────┬──────────┘
-                │
-      ┌─────────▼──────────┐
-      │  Deploy Production │
-      │  (Cloud Run prod)  │
-      └────────────────────┘
+```mermaid
+flowchart TB
+    Dev[Developer] --> Push[Git Push] --> Pipe[Azure DevOps Pipeline]
+    Pipe --> Lint["Lint & Format<br/>(ruff)"]
+    Pipe --> Tests["Tests<br/>(pytest)"]
+    Pipe --> Build["Build & Push<br/>(Docker)"]
+    Lint --> Stage
+    Tests --> Stage
+    Build --> Stage["Deploy Staging<br/>(Cloud Run dev)"]
+    Stage --> Approval{"Approval Manual<br/>(Tech Lead)"}
+    Approval -- aprobado --> Prod["Deploy Production<br/>(Cloud Run prod)"]
+```
 
 ### `azure-pipelines.yml`
 
