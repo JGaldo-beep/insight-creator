@@ -2,7 +2,6 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from pydantic import BaseModel, field_validator, model_validator
-from typing import Optional
 
 
 # ---------------------------------------------------
@@ -18,29 +17,29 @@ class ChannelEnum(str, Enum):
 
 CHANNEL_MAP: dict[str, ChannelEnum] = {
     # Facebook
-    "facebook":       ChannelEnum.FACEBOOK,
-    "fb":             ChannelEnum.FACEBOOK,
-    "fb ads":         ChannelEnum.FACEBOOK,
-    "fb_ads":         ChannelEnum.FACEBOOK,
-    "facebook ads":   ChannelEnum.FACEBOOK,
-    "facebook_ads":   ChannelEnum.FACEBOOK,
+    "facebook": ChannelEnum.FACEBOOK,
+    "fb": ChannelEnum.FACEBOOK,
+    "fb ads": ChannelEnum.FACEBOOK,
+    "fb_ads": ChannelEnum.FACEBOOK,
+    "facebook ads": ChannelEnum.FACEBOOK,
+    "facebook_ads": ChannelEnum.FACEBOOK,
     # Google
-    "google":         ChannelEnum.GOOGLE_ADS,
-    "google ads":     ChannelEnum.GOOGLE_ADS,
-    "google_ads":     ChannelEnum.GOOGLE_ADS,
-    "googleads":      ChannelEnum.GOOGLE_ADS,
+    "google": ChannelEnum.GOOGLE_ADS,
+    "google ads": ChannelEnum.GOOGLE_ADS,
+    "google_ads": ChannelEnum.GOOGLE_ADS,
+    "googleads": ChannelEnum.GOOGLE_ADS,
     # Instagram
-    "instagram":      ChannelEnum.INSTAGRAM,
-    "ig":             ChannelEnum.INSTAGRAM,
-    "ig ads":         ChannelEnum.INSTAGRAM,
+    "instagram": ChannelEnum.INSTAGRAM,
+    "ig": ChannelEnum.INSTAGRAM,
+    "ig ads": ChannelEnum.INSTAGRAM,
     # Email
-    "email":          ChannelEnum.EMAIL,
-    "email marketing":ChannelEnum.EMAIL,
-    "emailing":       ChannelEnum.EMAIL,
+    "email": ChannelEnum.EMAIL,
+    "email marketing": ChannelEnum.EMAIL,
+    "emailing": ChannelEnum.EMAIL,
     # Orgánico
-    "organic":        ChannelEnum.ORGANIC,
-    "organico":       ChannelEnum.ORGANIC,
-    "orgánico":       ChannelEnum.ORGANIC,
+    "organic": ChannelEnum.ORGANIC,
+    "organico": ChannelEnum.ORGANIC,
+    "orgánico": ChannelEnum.ORGANIC,
 }
 
 
@@ -153,7 +152,4 @@ class ValidationResult(BaseModel):
 
     @property
     def summary(self) -> str:
-        return (
-            f"Válidos: {len(self.valid)} | "
-            f"Rechazados: {len(self.rejected)}"
-        )
+        return f"Válidos: {len(self.valid)} | Rechazados: {len(self.rejected)}"

@@ -1,24 +1,17 @@
 import os
-import json
 import random
 from datetime import date, timedelta, datetime, timezone
 from decimal import Decimal
-from typing import Generator
 
 from sqlalchemy import create_engine, select, func
 from sqlalchemy.orm import Session
 from pydantic import ValidationError
 
-from src.data.models import (
-    Base, FactSales, FactAdSpend, FactCampaignPerformance, DimChannel
-)
-from src.data.validator import (
-    SaleRecord, AdSpendRecord, ValidationResult, ChannelEnum
-)
+from src.data.models import FactSales, FactAdSpend, FactCampaignPerformance
+from src.data.validator import SaleRecord, AdSpendRecord, ValidationResult
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://insight_user:insight_pass@localhost:5432/insight_db"
+    "DATABASE_URL", "postgresql://insight_user:insight_pass@localhost:5432/insight_db"
 )
 
 engine = create_engine(DATABASE_URL)
@@ -28,48 +21,64 @@ engine = create_engine(DATABASE_URL)
 # Generadores de datos simulados
 # --------------------------------
 
+
 def generate_sales_data(days: int = 30) -> list[dict]:
     """Simula la Fuente A — datos crudos de ventas con ruido intencional."""
     channels_raw = [
-        "facebook", "fb ads", "FB Ads", "Facebook",   # todos son FACEBOOK
-        "google", "Google Ads", "google_ads",          # todos son GOOGLE_ADS
-        "instagram", "IG", "ig ads",                   # todos son INSTAGRAM
+        "facebook",
+        "fb ads",
+        "FB Ads",
+        "Facebook",  # todos son FACEBOOK
+        "google",
+        "Google Ads",
+        "google_ads",  # todos son GOOGLE_ADS
+        "instagram",
+        "IG",
+        "ig ads",  # todos son INSTAGRAM
     ]
     records = []
     today = datetime.now(timezone.utc).date()
 
     for i in range(days * 3):
         sale_date = today - timedelta(days=random.randint(0, days))
-        records.append({
-            "transaction_id": f"TX-{i:05d}",
-            "customer_id": f"C-{random.randint(1, 50):03d}",
-            "amount": str(round(random.uniform(10, 500), 2)),
-            "sale_date": sale_date.isoformat(),
-            "channel": random.choice(channels_raw),
-        })
+        records.append(
+            {
+                "transaction_id": f"TX-{i:05d}",
+                "customer_id": f"C-{random.randint(1, 50):03d}",
+                "amount": str(round(random.uniform(10, 500), 2)),
+                "sale_date": sale_date.isoformat(),
+                "channel": random.choice(channels_raw),
+            }
+        )
 
     # Inyectamos datos sucios a propósito para probar el validator
-    records.append({
-        "transaction_id": "TX-BAD-01",
-        "customer_id": "C-999",
-        "amount": "-100",
-        "sale_date": date.today().isoformat(),
-        "channel": "facebook",
-    })
-    records.append({
-        "transaction_id": "TX-BAD-02",
-        "customer_id": "C-999",
-        "amount": "200",
-        "sale_date": "2099-01-01",
-        "channel": "facebook",
-    })
-    records.append({
-        "transaction_id": "TX-BAD-03",
-        "customer_id": "C-999",
-        "amount": "200",
-        "sale_date": date.today().isoformat(),
-        "channel": "tiktok_ads",
-    })
+    records.append(
+        {
+            "transaction_id": "TX-BAD-01",
+            "customer_id": "C-999",
+            "amount": "-100",
+            "sale_date": date.today().isoformat(),
+            "channel": "facebook",
+        }
+    )
+    records.append(
+        {
+            "transaction_id": "TX-BAD-02",
+            "customer_id": "C-999",
+            "amount": "200",
+            "sale_date": "2099-01-01",
+            "channel": "facebook",
+        }
+    )
+    records.append(
+        {
+            "transaction_id": "TX-BAD-03",
+            "customer_id": "C-999",
+            "amount": "200",
+            "sale_date": date.today().isoformat(),
+            "channel": "tiktok_ads",
+        }
+    )
 
     return records
 
@@ -85,20 +94,23 @@ def generate_ad_spend_data(days: int = 30) -> list[dict]:
         for channel in channels:
             impressions = random.randint(1000, 50000)
             clicks = random.randint(50, min(impressions, 2000))
-            records.append({
-                "spend_date": spend_date.isoformat(),
-                "channel": channel,
-                "cost": str(round(random.uniform(50, 1000), 2)),
-                "impressions": impressions,
-                "clicks": clicks,
-            })
+            records.append(
+                {
+                    "spend_date": spend_date.isoformat(),
+                    "channel": channel,
+                    "cost": str(round(random.uniform(50, 1000), 2)),
+                    "impressions": impressions,
+                    "clicks": clicks,
+                }
+            )
 
     return records
 
 
 # --------------------------------
 # Capa de validación
-# --------------------------------  
+# --------------------------------
+
 
 def validate_sales(raw_records: list[dict]) -> ValidationResult:
     result = ValidationResult()
@@ -134,9 +146,10 @@ def validate_ad_spend(raw_records: list[dict]) -> ValidationResult:
     return result
 
 
-# --------------------------------  
+# --------------------------------
 # Persistencia en PostgreSQL
 # --------------------------------
+
 
 def persist_sales(session: Session, result: ValidationResult) -> int:
     """Inserta ventas válidas evitando duplicados."""
@@ -154,13 +167,15 @@ def persist_sales(session: Session, result: ValidationResult) -> int:
         if exists:
             continue
 
-        session.add(FactSales(
-            transaction_id=record.transaction_id,
-            customer_id=record.customer_id,
-            amount=record.amount,
-            sale_date=record.sale_date,
-            channel_key=record.channel,
-        ))
+        session.add(
+            FactSales(
+                transaction_id=record.transaction_id,
+                customer_id=record.customer_id,
+                amount=record.amount,
+                sale_date=record.sale_date,
+                channel_key=record.channel,
+            )
+        )
         inserted += 1
 
     session.commit()
@@ -183,13 +198,15 @@ def persist_ad_spend(session: Session, result: ValidationResult) -> int:
         if exists:
             continue
 
-        session.add(FactAdSpend(
-            spend_date=record.spend_date,
-            channel_key=record.channel,
-            cost=record.cost,
-            impressions=record.impressions,
-            clicks=record.clicks,
-        ))
+        session.add(
+            FactAdSpend(
+                spend_date=record.spend_date,
+                channel_key=record.channel,
+                cost=record.cost,
+                impressions=record.impressions,
+                clicks=record.clicks,
+            )
+        )
         inserted += 1
 
     session.commit()
@@ -237,16 +254,18 @@ def refresh_campaign_performance(session: Session) -> None:
             existing.total_impressions = spend.impressions if spend else 0
             existing.total_clicks = spend.clicks if spend else 0
         else:
-            session.add(FactCampaignPerformance(
-                perf_date=row.sale_date,
-                channel_key=row.channel_key,
-                total_revenue=row.total_revenue,
-                total_transactions=row.total_transactions,
-                unique_customers=row.unique_customers,
-                total_ad_spend=spend.cost if spend else Decimal("0"),
-                total_impressions=spend.impressions if spend else 0,
-                total_clicks=spend.clicks if spend else 0,
-            ))
+            session.add(
+                FactCampaignPerformance(
+                    perf_date=row.sale_date,
+                    channel_key=row.channel_key,
+                    total_revenue=row.total_revenue,
+                    total_transactions=row.total_transactions,
+                    unique_customers=row.unique_customers,
+                    total_ad_spend=spend.cost if spend else Decimal("0"),
+                    total_impressions=spend.impressions if spend else 0,
+                    total_clicks=spend.clicks if spend else 0,
+                )
+            )
 
     session.commit()
 
@@ -254,6 +273,7 @@ def refresh_campaign_performance(session: Session) -> None:
 # ---------------------------------------------
 # Punto de entrada principal
 # ---------------------------------------------
+
 
 def run_pipeline() -> dict:
     """Ejecuta el pipeline completo de ingesta."""
