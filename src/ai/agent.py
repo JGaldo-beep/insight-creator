@@ -122,14 +122,26 @@ IMPORTANTE:
         tool_node = ToolNode(TOOLS)
         tool_results = tool_node.invoke({"messages": [response]})
 
+        # Mapeamos cada tool_call_id a los args originales para conservar los inputs
+        args_by_id = {tc["id"]: tc.get("args", {}) for tc in response.tool_calls}
+        name_by_id = {tc["id"]: tc.get("name") for tc in response.tool_calls}
+
         for msg in tool_results["messages"]:
             try:
-                content = json.loads(msg.content)
-                query_results.append({"tool": msg.name, "data": content})
-            except (json.JSONDecodeError, AttributeError):
-                query_results.append(
-                    {"tool": getattr(msg, "name", "unknown"), "data": msg.content}
-                )
+                output = json.loads(msg.content)
+            except (json.JSONDecodeError, AttributeError, TypeError):
+                output = getattr(msg, "content", None)
+
+            tool_call_id = getattr(msg, "tool_call_id", None)
+            tool_name = getattr(msg, "name", None) or name_by_id.get(tool_call_id, "unknown")
+            query_results.append(
+                {
+                    "tool": tool_name,
+                    "tool_call_id": tool_call_id,
+                    "input": args_by_id.get(tool_call_id, {}),
+                    "output": output,
+                }
+            )
 
     print(f"Tools ejecutadas: {[r['tool'] for r in query_results]}")
     return {**state, "query_results": query_results}
@@ -287,4 +299,9 @@ def chat(user_message: str) -> dict:
     }
 
     result = agent.invoke(initial_state)
-    return result["final_response"]
+    final = result["final_response"] or {}
+    return {
+        **final,
+        "intent": result.get("intent"),
+        "tool_calls": result.get("query_results") or [],
+    }
