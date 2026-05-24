@@ -11,8 +11,7 @@ from langchain_core.tools import tool
 load_dotenv()
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://insight_user:insight_pass@localhost:5432/insight_db"
+    "DATABASE_URL", "postgresql://insight_user:insight_pass@localhost:5432/insight_db"
 )
 
 engine = create_engine(DATABASE_URL)
@@ -30,8 +29,7 @@ def _serialize(value):
 def _rows_to_dict(rows) -> list[dict]:
     """Convierte resultados de SQLAlchemy a lista de dicts."""
     return [
-        {key: _serialize(value) for key, value in row._mapping.items()}
-        for row in rows
+        {key: _serialize(value) for key, value in row._mapping.items()} for row in rows
     ]
 
 
@@ -54,7 +52,7 @@ def get_kpis(channel: Optional[str] = None, limit: int = 30) -> list[dict]:
                     ORDER BY perf_date DESC
                     LIMIT :limit
                 """),
-                {"channel": channel.upper(), "limit": limit}
+                {"channel": channel.upper(), "limit": limit},
             ).fetchall()
         else:
             rows = session.execute(
@@ -64,7 +62,7 @@ def get_kpis(channel: Optional[str] = None, limit: int = 30) -> list[dict]:
                     ORDER BY perf_date DESC
                     LIMIT :limit
                 """),
-                {"limit": limit}
+                {"limit": limit},
             ).fetchall()
 
     return _rows_to_dict(rows)
@@ -125,7 +123,7 @@ def get_channel_trend(channel: str, days: int = 14) -> list[dict]:
                   AND perf_date >= CURRENT_DATE - :days * INTERVAL '1 day'
                 ORDER BY perf_date ASC
             """),
-            {"channel": channel.upper(), "days": days}
+            {"channel": channel.upper(), "days": days},
         ).fetchall()
 
     return _rows_to_dict(rows)
@@ -155,7 +153,7 @@ def get_period_summary(days: int = 30) -> dict:
                 FROM fact_campaign_performance
                 WHERE perf_date >= CURRENT_DATE - :days * INTERVAL '1 day'
             """),
-            {"days": days}
+            {"days": days},
         ).fetchone()
 
         best_channel = session.execute(
@@ -168,7 +166,7 @@ def get_period_summary(days: int = 30) -> dict:
                 ORDER BY avg_roi DESC
                 LIMIT 1
             """),
-            {"days": days}
+            {"days": days},
         ).fetchone()
 
     return {
