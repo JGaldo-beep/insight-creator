@@ -38,11 +38,20 @@ class ChatRequest(BaseModel):
     message: str
 
 
+class ToolCall(BaseModel):
+    tool: str
+    tool_call_id: str | None = None
+    input: dict | None = None
+    output: dict | list | str | int | float | bool | None = None
+
+
 class ChatResponse(BaseModel):
     summary: str
     findings: list[str]
     recommendations: list[str]
     natural_response: str
+    intent: str | None = None
+    tool_calls: list[ToolCall] = []
 
 
 # ----------------------------------------
