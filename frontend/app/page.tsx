@@ -1,65 +1,112 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useCallback, useEffect, useState } from "react";
+import {
+  Activity,
+  DollarSign,
+  ShoppingCart,
+  TrendingUp,
+} from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
+import { KpiCard } from "@/components/dashboard/kpi-card";
+import { RoiByChannelChart } from "@/components/dashboard/roi-by-channel-chart";
+import { RevenueVsSpendChart } from "@/components/dashboard/revenue-vs-spend-chart";
+import { IngestButton } from "@/components/dashboard/ingest-button";
+import { fetchMetrics } from "@/lib/api";
+import type { MetricsResponse } from "@/lib/types";
+
+const currency = (v: number) =>
+  v.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  });
+
+export default function DashboardPage() {
+  const [data, setData] = useState<MetricsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchMetrics();
+      setData(res);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error desconocido");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const g = data?.global;
+  const roi = g?.global_roi ?? 0;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="mx-auto max-w-6xl px-6 py-8 md:px-10">
+      <header className="flex flex-wrap items-start justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            KPIs de campañas de marketing en tiempo real
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <IngestButton onSuccess={load} />
+      </header>
+
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTitle>No pudimos cargar las métricas</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {loading && !data && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-12">
+          <Spinner />
+          Cargando métricas…
         </div>
-      </main>
+      )}
+
+      {data && g && (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <KpiCard
+              title="ROI Global"
+              value={`${(roi * 100).toFixed(2)}%`}
+              icon={TrendingUp}
+              tone={roi >= 0 ? "positive" : "negative"}
+              hint={roi >= 0 ? "Inversión rentable" : "Pérdida sobre inversión"}
+            />
+            <KpiCard
+              title="Revenue Total"
+              value={currency(g.total_revenue)}
+              icon={DollarSign}
+            />
+            <KpiCard
+              title="Ad Spend Total"
+              value={currency(g.total_ad_spend)}
+              icon={Activity}
+            />
+            <KpiCard
+              title="Transacciones"
+              value={g.total_transactions.toLocaleString("en-US")}
+              icon={ShoppingCart}
+            />
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <RoiByChannelChart data={data.by_channel} />
+            <RevenueVsSpendChart data={data.by_channel} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
