@@ -14,23 +14,41 @@ de datos con un agente conversacional inteligente para análisis de campañas de
 ## Estructura del Proyecto
 
 insight-extractor/
+
 ├── src/
+
 │   ├── data/
+
 │   │   ├── models.py       # Modelos SQLAlchemy (tablas, SCD2, vistas)
+
 │   │   ├── pipeline.py     # Ingesta, validación y persistencia
+
 │   │   └── validator.py    # Reglas de gobernanza con Pydantic
+
 │   ├── ai/
+
 │   │   ├── agent.py        # Grafo LangGraph con 3 nodos
+
 │   │   └── tools.py        # Herramientas de consulta SQL para el agente
+
 │   └── main.py             # API FastAPI
+
 ├── migrations/
+
 │   └── init_db.py          # Creación de tablas y vista de KPIs
+
 ├── tests/
+
 │   └── test_validator.py   # Tests de gobernanza
+
 ├── Dockerfile
+
 ├── docker-compose.yml
+
 ├── requirements.txt
+
 └── .env.example
+
 
 ## Requisitos Previos
 
