@@ -16,18 +16,43 @@ services:
       timeout: 5s
       retries: 5
 
-  app:
+  migrations:
     build: .
-    container_name: insight_app
+    container_name: insight_migrations
     depends_on:
       db:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://insight_user:insight_pass@db:5432/insight_db
+    command: python -m migrations.init_db
+    volumes:
+      - .:/app
+
+  seed:
+    build: .
+    container_name: insight_seed
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://insight_user:insight_pass@db:5432/insight_db
+    command: python -m src.data.pipeline
+    volumes:
+      - .:/app
+
+  app:
+    build: .
+    container_name: insight_app
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://insight_user:insight_pass@db:5432/insight_db
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     ports:
       - "8000:8000"
     volumes:
-      - ./src:/app/src
+      - .:/app
 
 volumes:
   postgres_data:
