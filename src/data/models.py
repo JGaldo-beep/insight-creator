@@ -1,11 +1,16 @@
-from datetime import date
 from datetime import datetime, timezone
-from decimal import Decimal
 from sqlalchemy import (
-    Column, Integer, String, Numeric, Date, DateTime,
-    Boolean, ForeignKey, UniqueConstraint, Index, text
+    Column,
+    Integer,
+    String,
+    Numeric,
+    Date,
+    DateTime,
+    Boolean,
+    UniqueConstraint,
+    Index,
 )
-from sqlalchemy.orm import DeclarativeBase, relationship
+from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):
@@ -22,6 +27,7 @@ class DimChannel(Base):
     se cierra el registro actual y se crea uno nuevo.
     El pasado nunca se sobreescribe.
     """
+
     __tablename__ = "dim_channel"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -48,6 +54,7 @@ class FactSales(Base):
     Datos crudos de ventas transaccionales.
     Un registro por transacción individual.
     """
+
     __tablename__ = "fact_sales"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -56,11 +63,11 @@ class FactSales(Base):
     amount = Column(Numeric(12, 2), nullable=False)
     sale_date = Column(Date, nullable=False)
     channel_key = Column(String(50), nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-
-    __table_args__ = (
-        Index("ix_fact_sales_date_channel", "sale_date", "channel_key"),
+    created_at = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
+
+    __table_args__ = (Index("ix_fact_sales_date_channel", "sale_date", "channel_key"),)
 
 
 # -----------------------------------------------
@@ -71,6 +78,7 @@ class FactAdSpend(Base):
     Datos de inversión publicitaria por día y canal.
     Un registro por (fecha, canal) — se deduplica por esa combinación.
     """
+
     __tablename__ = "fact_ad_spend"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -79,7 +87,9 @@ class FactAdSpend(Base):
     cost = Column(Numeric(12, 2), nullable=False)
     impressions = Column(Integer, nullable=False)
     clicks = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
 
     __table_args__ = (
         UniqueConstraint("spend_date", "channel_key", name="uq_adspend_date_channel"),
@@ -96,6 +106,7 @@ class FactCampaignPerformance(Base):
     Es la tabla que consulta el agente de IA.
     Se actualiza con cada ingesta.
     """
+
     __tablename__ = "fact_campaign_performance"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -112,7 +123,11 @@ class FactCampaignPerformance(Base):
     total_impressions = Column(Integer, nullable=False, default=0)
     total_clicks = Column(Integer, nullable=False, default=0)
 
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
     __table_args__ = (
         UniqueConstraint("perf_date", "channel_key", name="uq_perf_date_channel"),
